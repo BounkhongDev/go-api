@@ -5,6 +5,8 @@ import (
 	"go-api/src/models"
 	"go-api/src/responses"
 
+	"go-api/paginates"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
@@ -12,8 +14,8 @@ import (
 type UsersRepository interface {
 	//Insert your function interface
 
-	// GetAll Users
-	GetUsers(ctx context.Context) ([]responses.User, error)
+	// GetAll Users by Paginate
+	GetUsers(ctx context.Context, paginate paginates.PaginateRequest) (*paginates.PaginatedResponse, error)
 
 	//Get User by ID
 	GetUserByID(ctx context.Context, id uuid.UUID) (responses.User, error)
@@ -30,13 +32,15 @@ func NewUsersRepository(db *gorm.DB) UsersRepository {
 	return &usersRepository{db: db}
 }
 
-func (r *usersRepository) GetUsers(ctx context.Context) ([]responses.User, error) {
+func (r *usersRepository) GetUsers(ctx context.Context, paginate paginates.PaginateRequest) (*paginates.PaginatedResponse, error) {
 	var users []models.Users
 	var usersResponses []responses.User
-	if err := r.db.Model(&users).Preload("Roles").Find(&usersResponses).Error; err != nil {
-		return usersResponses, err
+	// Use the Paginate function with a slice of users
+	paginatedResponse, err := paginates.Paginate(r.db, &users, paginate, &usersResponses)
+	if err != nil {
+		return nil, err
 	}
-	return usersResponses, nil
+	return paginatedResponse, nil
 }
 
 func (r *usersRepository) GetUserByID(ctx context.Context, id uuid.UUID) (responses.User, error) {

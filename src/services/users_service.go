@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"go-api/paginates"
 	"go-api/src/models"
 	"go-api/src/repositories"
 	requests "go-api/src/requests"
@@ -13,8 +14,8 @@ import (
 
 type UsersService interface {
 	// Insert your function interface
-	// GetAll Users
-	GetUsers(ctx context.Context) ([]response.User, error)
+	// GetAll Users by Paginate
+	GetUsers(ctx context.Context, paginate paginates.PaginateRequest) (*paginates.PaginatedResponse, error)
 
 	// Get User by ID
 	GetUserByID(ctx context.Context, id uuid.UUID) (response.User, error)
@@ -37,12 +38,11 @@ func NewUsersService(
 	}
 }
 
-func (s *usersService) GetUsers(ctx context.Context) ([]response.User, error) {
+func (s *usersService) GetUsers(ctx context.Context, paginate paginates.PaginateRequest) (*paginates.PaginatedResponse, error) {
 	// get users from repository
-	users, err := s.repositoryUsers.GetUsers(ctx)
+	users, err := s.repositoryUsers.GetUsers(ctx, paginate)
 	if err != nil {
-
-		return users, err
+		return nil, err
 	}
 
 	return users, nil

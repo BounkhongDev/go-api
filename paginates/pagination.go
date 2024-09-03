@@ -1,38 +1,60 @@
 package paginates
 
 import (
+	"errors"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
 
 type PaginateRequest struct {
-	Item int `json:"item" validate:"required"`
-	Page int `json:"page" validate:"required"`
+	Limit int `json:"limit" validate:"required"`
+	Page  int `json:"page" validate:"required"`
 }
 
 type PaginatedResponse struct {
-	Data        interface{} `json:"data"`
-	Total       int         `json:"total"`
-	PerPage     int         `json:"per_page"`
-	CurrentPage int         `json:"current_page"`
-	LastPage    int         `json:"last_page"`
+	Rows         interface{} `json:"rows"`
+	Count        int         `json:"count"`
+	CountPage    int         `json:"countPage"`
+	CurrentPage  int         `json:"currentPage"`
+	NextPage     int         `json:"nextPage"`
+	PreviousPage int         `json:"previousPage"`
 }
 
-func Paginate(db *gorm.DB, model interface{}, paginate PaginateRequest) (*PaginatedResponse, error) {
+func Paginate(db *gorm.DB, model interface{}, paginate PaginateRequest, results interface{}) (*PaginatedResponse, error) {
+
+	if paginate.Limit <= 0 {
+		return nil, errors.New("limit must be greater than 0")
+	}
 	var total int64
+
 	db.Model(model).Count(&total)
-	lastPage := (int(total) + paginate.Item - 1) / paginate.Item
-	offset := (paginate.Page - 1) * paginate.Item
-	result := db.Preload(clause.Associations).Limit(paginate.Item).Offset(offset).Find(model)
+	countPage := (int(total) + paginate.Limit - 1) / paginate.Limit
+	offset := (paginate.Page - 1) * paginate.Limit
+
+	// Fetch paginated results
+	result := db.Preload(clause.Associations).Limit(paginate.Limit).Offset(offset).Find(results)
 	if result.Error != nil {
 		return nil, result.Error
 	}
+
+	nextPage := paginate.Page + 1
+	if nextPage > countPage {
+		nextPage = 0
+	}
+
+	previousPage := paginate.Page - 1
+	if previousPage < 1 {
+		previousPage = 0
+	}
+
 	pagination := &PaginatedResponse{
-		Total:       int(total),
-		PerPage:     paginate.Item,
-		CurrentPage: paginate.Page,
-		LastPage:    lastPage,
-		Data:        model,
+		Count:        int(total),
+		CountPage:    countPage,
+		CurrentPage:  paginate.Page,
+		NextPage:     nextPage,
+		PreviousPage: previousPage,
+		Rows:         results,
 	}
 	return pagination, nil
 }

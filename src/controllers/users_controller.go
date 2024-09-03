@@ -1,8 +1,10 @@
 package controllers
 
 import (
+	"go-api/paginates"
 	"go-api/responses"
 	"go-api/src/services"
+	"strconv"
 
 	"go-api/src/requests"
 
@@ -11,7 +13,7 @@ import (
 )
 
 type UsersController interface {
-	//get all users
+	//get all users with pagination
 	GetUsers(ctx *fiber.Ctx) error
 
 	//get user by id
@@ -35,16 +37,36 @@ func NewUsersController(
 	}
 }
 
-func (c *usersController) GetUsers(ctx *fiber.Ctx) error {
+func (uc *usersController) GetUsers(ctx *fiber.Ctx) error {
+	// Parse pagination parameters from request
 
-	defer ctx.Context().Done()
+	limitStr := ctx.Query("limit", "10") // Default to 10 items per page
+	pageStr := ctx.Query("page", "1")    // Default to page 1
 
-	users, err := c.serviceUsers.GetUsers(ctx.Context())
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid item parameter"})
+	}
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid page parameter"})
+	}
+
+	paginate := paginates.PaginateRequest{
+		Limit: limit,
+		Page:  page,
+	}
+
+	// Call repository method
+	paginatedResponse, err := uc.serviceUsers.GetUsers(ctx.Context(), paginate)
 	if err != nil {
 		return responses.NewErrorResponses(ctx, err)
 	}
 
-	return responses.NewSuccessResponse(ctx, users)
+	// return ctx.Status(fiber.StatusOK).JSON(paginatedResponse)
+
+	return responses.NewSuccessResponse(ctx, paginatedResponse)
 }
 
 func (c *usersController) GetUserByID(ctx *fiber.Ctx) error {
@@ -60,6 +82,10 @@ func (c *usersController) GetUserByID(ctx *fiber.Ctx) error {
 	users, err := c.serviceUsers.GetUserByID(ctx.Context(), uid)
 	if err != nil {
 		return responses.NewErrorResponses(ctx, err)
+	}
+	//if user not found return 404
+	if users.ID == uuid.Nil {
+		return responses.NewErrorNotFound(ctx, "User not found")
 	}
 
 	return responses.NewSuccessResponse(ctx, users)
