@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"database/sql"
 	"go-api/src/models"
 	"go-api/src/repositories"
 	requests "go-api/src/requests"
@@ -42,35 +41,11 @@ func (s *usersService) GetUsers(ctx context.Context) ([]response.User, error) {
 	// get users from repository
 	users, err := s.repositoryUsers.GetUsers(ctx)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return []response.User{}, nil
-		}
-		return nil, err
+
+		return users, err
 	}
 
-	// map users data to response.User
-	newUsers := []response.User{}
-	for _, user := range users {
-		var newUser response.User
-
-		// map the basic fields
-		mapper.StructMapper(user, &newUser)
-		newUser.ID = user.ID
-		newUser.CreatedAt = user.CreatedAt
-		newUser.UpdatedAt = user.UpdatedAt
-
-		// map the single role
-		newUser.Roles = response.Roles{
-			ID:        user.Roles.ID,        // Access the single role ID
-			RoleName:  *user.Roles.RoleName, // Access the single role RoleName
-			CreatedAt: user.Roles.CreatedAt, // Access the single role CreatedAt
-			UpdatedAt: user.Roles.UpdatedAt, // Access the single role UpdatedAt
-		}
-
-		newUsers = append(newUsers, newUser)
-	}
-
-	return newUsers, nil
+	return users, nil
 }
 
 func (s *usersService) GetUserByID(ctx context.Context, id uuid.UUID) (response.User, error) {

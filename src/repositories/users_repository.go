@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"fmt"
 	"go-api/src/models"
 	"go-api/src/responses"
 
@@ -14,7 +13,7 @@ type UsersRepository interface {
 	//Insert your function interface
 
 	// GetAll Users
-	GetUsers(ctx context.Context) ([]models.Users, error)
+	GetUsers(ctx context.Context) ([]responses.User, error)
 
 	//Get User by ID
 	GetUserByID(ctx context.Context, id uuid.UUID) (responses.User, error)
@@ -31,32 +30,24 @@ func NewUsersRepository(db *gorm.DB) UsersRepository {
 	return &usersRepository{db: db}
 }
 
-func (r *usersRepository) GetUsers(ctx context.Context) ([]models.Users, error) {
+func (r *usersRepository) GetUsers(ctx context.Context) ([]responses.User, error) {
 	var users []models.Users
-	if err := r.db.Preload("Roles").Find(&users).Error; err != nil {
-		return nil, err
+	var usersResponses []responses.User
+	if err := r.db.Model(&users).Preload("Roles").Find(&usersResponses).Error; err != nil {
+		return usersResponses, err
 	}
-	return users, nil
+	return usersResponses, nil
 }
 
-//	func (r *usersRepository) GetUserByID(ctx context.Context, id uuid.UUID) (models.Users, error) {
-//		var users models.Users
-//		if err := r.db.Preload("Roles").First(&users, id).Error; err != nil {
-//			return users, err
-//		}
-//		return users, nil
-//	}
 func (r *usersRepository) GetUserByID(ctx context.Context, id uuid.UUID) (responses.User, error) {
 	var users models.Users
-	var us responses.User
+	var usersResponses responses.User
 
-	if err := r.db.Model(&users).Preload("Roles").Find(&us).Error; err != nil {
-		return us, err
+	if err := r.db.Model(&users).Where("id", id).Preload("Roles").Find(&usersResponses).Error; err != nil {
+		return usersResponses, err
 	}
 
-	fmt.Println(us)
-
-	return us, nil
+	return usersResponses, nil
 }
 
 func (r *usersRepository) CreateUsers(ctx context.Context, users models.Users) error {
