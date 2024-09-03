@@ -76,8 +76,10 @@ func (c *usersController) GetUserByID(ctx *fiber.Ctx) error {
 	id := ctx.Params("id")
 	//convert string to uuid
 
-	// string to uuid
 	uid, err := uuid.Parse(id)
+	if err != nil {
+		return responses.NewErrorResponses(ctx, err)
+	}
 
 	users, err := c.serviceUsers.GetUserByID(ctx.Context(), uid)
 	if err != nil {
