@@ -10,9 +10,9 @@ import (
 type DefaultModel struct {
 	ID        uuid.UUID `gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`
-	CreatedBy uuid.UUID
+	CreatedBy *uuid.UUID
 	UpdatedAt time.Time `gorm:"autoUpdateTime"`
-	UpdateBy  uuid.UUID
+	UpdateBy  *uuid.UUID
 	DeletedAt gorm.DeletedAt `gorm:"index"`
-	DeletedBy uuid.UUID
+	DeletedBy *uuid.UUID
 }

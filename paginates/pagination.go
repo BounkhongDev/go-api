@@ -33,7 +33,7 @@ func Paginate(db *gorm.DB, model interface{}, paginate PaginateRequest, results 
 	offset := (paginate.Page - 1) * paginate.Limit
 
 	// Fetch paginated results
-	result := db.Preload(clause.Associations).Limit(paginate.Limit).Offset(offset).Find(results)
+	result := db.Model(model).Preload(clause.Associations).Limit(paginate.Limit).Offset(offset).Find(results)
 	if result.Error != nil {
 		return nil, result.Error
 	}
