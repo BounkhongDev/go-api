@@ -12,7 +12,7 @@ import (
 type RolesService interface {
 	// Insert your function interface
 	// GetAll Roles by Paginate
-	GetRoles(ctx context.Context, paginate paginates.PaginateRequest) (*paginates.PaginatedResponse, error)
+	GetRoles(ctx context.Context, paginate paginates.PaginateRequest, filter requests.FilterRequest) (*paginates.PaginatedResponse, error)
 
 	// Create Roles
 	CreateRoles(ctx context.Context, roles requests.Role) error
@@ -32,9 +32,9 @@ func NewRolesService(
 	}
 }
 
-func (s *rolesService) GetRoles(ctx context.Context, paginate paginates.PaginateRequest) (*paginates.PaginatedResponse, error) {
+func (s *rolesService) GetRoles(ctx context.Context, paginate paginates.PaginateRequest, filters requests.FilterRequest) (*paginates.PaginatedResponse, error) {
 	// get roles from repository
-	roles, err := s.repositoryRoles.GetRoles(ctx, paginate)
+	roles, err := s.repositoryRoles.GetRoles(ctx, paginate, filters)
 	if err != nil {
 		return nil, err
 	}

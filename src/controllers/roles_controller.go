@@ -38,7 +38,13 @@ func (c *rolesController) GetRoles(ctx *fiber.Ctx) error {
 	limitStr := ctx.Query("limit", "10") // Default to 10 items per page
 	pageStr := ctx.Query("page", "1")    // Default to page 1
 
-	//F
+	//filter request
+
+	filters := requests.FilterRequest{
+		Search:    ctx.Query("search", ""),
+		StartDate: ctx.Query("startDate", ""),
+		EndDate:   ctx.Query("endDate", ""),
+	}
 
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil {
@@ -56,7 +62,7 @@ func (c *rolesController) GetRoles(ctx *fiber.Ctx) error {
 	}
 
 	// Call repository method
-	paginatedResponse, err := c.serviceRoles.GetRoles(ctx.Context(), paginate)
+	paginatedResponse, err := c.serviceRoles.GetRoles(ctx.Context(), paginate, filters)
 	if err != nil {
 		return responses.NewErrorResponses(ctx, err)
 	}

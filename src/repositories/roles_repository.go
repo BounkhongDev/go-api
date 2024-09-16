@@ -5,6 +5,7 @@ import (
 
 	"go-api/paginates"
 	"go-api/src/models"
+	"go-api/src/requests"
 	"go-api/src/responses"
 
 	"gorm.io/gorm"
@@ -13,7 +14,7 @@ import (
 type RolesRepository interface {
 	//Insert your function interface
 	// GetAll Roles by Paginate
-	GetRoles(ctx context.Context, paginate paginates.PaginateRequest) (*paginates.PaginatedResponse, error)
+	GetRoles(ctx context.Context, paginate paginates.PaginateRequest, filters requests.FilterRequest) (*paginates.PaginatedResponse, error)
 
 	//Create Roles
 	CreateRoles(ctx context.Context, roles models.Roles) error
@@ -27,30 +28,40 @@ func NewRolesRepository(db *gorm.DB) RolesRepository {
 	return &rolesRepository{db: db}
 }
 
-func (r *rolesRepository) GetRoles(ctx context.Context, paginate paginates.PaginateRequest) (*paginates.PaginatedResponse, error) {
+func (r *rolesRepository) GetRoles(ctx context.Context, paginate paginates.PaginateRequest, filters requests.FilterRequest) (*paginates.PaginatedResponse, error) {
 	var roles []responses.Role
 	var total int64
 
-	// Count the total number of records
-	if err := r.db.Model(&responses.Roles{}).Count(&total).Error; err != nil {
+	// Start building the query
+	query := r.db.Model(&responses.Role{})
+
+	// Apply filters (if any)
+	if filters.StartDate != "" && filters.EndDate != "" {
+		query = query.Where("DATE(created_at) BETWEEN ? AND ?", filters.StartDate, filters.EndDate)
+	}
+
+	if filters.Search != "" {
+		query = query.Where("LOWER(role_name) LIKE LOWER(?)", "%"+filters.Search+"%")
+	}
+
+	// Count the total number of records after filters are applied
+	if err := query.Count(&total).Error; err != nil {
 		return nil, err
 	}
 
-	// Calculate offset
+	// Apply pagination (limit and offset)
 	offset := (paginate.Page - 1) * paginate.Limit
-
-	// Fetch the paginated results
-	if err := r.db.Limit(paginate.Limit).Offset(offset).Find(&roles).Error; err != nil {
+	if err := query.Limit(paginate.Limit).Offset(offset).Find(&roles).Error; err != nil {
 		return nil, err
 	}
 
-	// Create IFindAndCountAll struct
+	// Prepare the result using IFindAndCountAll struct
 	result := paginates.IFindAndCountAll{
 		Count: total,
 		Rows:  roles,
 	}
 
-	// Use PaginationResult to get the paginated response
+	// Use PaginationResult to create the paginated response
 	paginatedResponse := paginates.PaginationResult(paginate.Page, paginate.Limit, result)
 
 	return &paginatedResponse, nil
