@@ -33,14 +33,35 @@ func NewUsersRepository(db *gorm.DB) UsersRepository {
 }
 
 func (r *usersRepository) GetUsers(ctx context.Context, paginate paginates.PaginateRequest) (*paginates.PaginatedResponse, error) {
-	var users []models.Users
-	var usersResponses []responses.User
-	// Use the Paginate function with a slice of users
-	paginatedResponse, err := paginates.Paginate(r.db, &users, paginate, &usersResponses)
-	if err != nil {
+	var users []responses.User
+	var total int64
+
+	// Count the total number of records
+	if err := r.db.Model(&responses.User{}).Count(&total).Error; err != nil {
 		return nil, err
 	}
-	return paginatedResponse, nil
+
+	// Calculate offset
+	offset := (paginate.Page - 1) * paginate.Limit
+
+	// Fetch the paginated results
+	if err := r.db.Preload("Roles").
+		Limit(paginate.Limit).
+		Offset(offset).
+		Find(&users).Error; err != nil {
+		return nil, err
+	}
+
+	// Create IFindAndCountAll struct
+	result := paginates.IFindAndCountAll{
+		Count: total,
+		Rows:  users,
+	}
+
+	// Use PaginationResult to get the paginated response
+	paginatedResponse := paginates.PaginationResult(paginate.Page, paginate.Limit, result)
+
+	return &paginatedResponse, nil
 }
 
 func (r *usersRepository) GetUserByID(ctx context.Context, id uuid.UUID) (responses.User, error) {

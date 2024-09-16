@@ -1,60 +1,58 @@
 package paginates
 
-import (
-	"errors"
+import "math"
 
-	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
-)
-
+// PaginateRequest represents the structure for pagination input parameters
 type PaginateRequest struct {
 	Limit int `json:"limit" validate:"required"`
 	Page  int `json:"page" validate:"required"`
 }
 
+// PaginatedResponse represents the structure for pagination output data
 type PaginatedResponse struct {
 	Rows         interface{} `json:"rows"`
-	Count        int         `json:"count"`
+	Count        int64       `json:"count"`
 	CountPage    int         `json:"countPage"`
 	CurrentPage  int         `json:"currentPage"`
 	NextPage     int         `json:"nextPage"`
 	PreviousPage int         `json:"previousPage"`
 }
 
-func Paginate(db *gorm.DB, model interface{}, paginate PaginateRequest, results interface{}) (*PaginatedResponse, error) {
+// IFindAndCountAll represents the structure for input data to be paginated
+type IFindAndCountAll struct {
+	Count int64       `json:"count"`
+	Rows  interface{} `json:"rows"`
+}
 
-	if paginate.Limit <= 0 {
-		return nil, errors.New("limit must be greater than 0")
-	}
-	var total int64
-
-	db.Model(model).Count(&total)
-	countPage := (int(total) + paginate.Limit - 1) / paginate.Limit
-	offset := (paginate.Page - 1) * paginate.Limit
-
-	// Fetch paginated results
-	result := db.Model(model).Preload(clause.Associations).Limit(paginate.Limit).Offset(offset).Find(results)
-	if result.Error != nil {
-		return nil, result.Error
+// PaginationResult performs pagination calculations and returns the paginated response
+func PaginationResult(page int, limit int, result IFindAndCountAll) PaginatedResponse {
+	// Calculate total number of pages
+	countPage := float64(result.Count) / float64(limit)
+	if countPage != math.Floor(countPage) {
+		countPage = math.Floor(countPage) + 1
 	}
 
-	nextPage := paginate.Page + 1
-	if nextPage > countPage {
+	// Calculate next and previous pages
+	var nextPage, previousPage int
+	if int(countPage) > page {
+		nextPage = page + 1
+	} else {
 		nextPage = 0
 	}
 
-	previousPage := paginate.Page - 1
-	if previousPage < 1 {
+	if page > 1 {
+		previousPage = page - 1
+	} else {
 		previousPage = 0
 	}
 
-	pagination := &PaginatedResponse{
-		Count:        int(total),
-		CountPage:    countPage,
-		CurrentPage:  paginate.Page,
+	// Return the paginated response
+	return PaginatedResponse{
+		Rows:         result.Rows,
+		Count:        result.Count,
+		CountPage:    int(countPage),
+		CurrentPage:  page,
 		NextPage:     nextPage,
 		PreviousPage: previousPage,
-		Rows:         results,
 	}
-	return pagination, nil
 }
