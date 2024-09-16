@@ -1,9 +1,11 @@
 package controllers
 
 import (
+	"go-api/paginates"
 	"go-api/responses"
 	"go-api/src/requests"
 	"go-api/src/services"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -32,14 +34,34 @@ func NewRolesController(
 
 func (c *rolesController) GetRoles(ctx *fiber.Ctx) error {
 
-	defer ctx.Context().Done()
+	// Parse pagination parameters from request
+	limitStr := ctx.Query("limit", "10") // Default to 10 items per page
+	pageStr := ctx.Query("page", "1")    // Default to page 1
 
-	roles, err := c.serviceRoles.GetRoles(ctx.Context())
+	//F
+
+	limit, err := strconv.Atoi(limitStr)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid item parameter"})
+	}
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid page parameter"})
+	}
+
+	paginate := paginates.PaginateRequest{
+		Limit: limit,
+		Page:  page,
+	}
+
+	// Call repository method
+	paginatedResponse, err := c.serviceRoles.GetRoles(ctx.Context(), paginate)
 	if err != nil {
 		return responses.NewErrorResponses(ctx, err)
 	}
 
-	return responses.NewSuccessResponse(ctx, roles)
+	return responses.NewSuccessResponse(ctx, paginatedResponse)
 }
 
 func (c *rolesController) CreateRoles(ctx *fiber.Ctx) error {

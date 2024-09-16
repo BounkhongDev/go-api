@@ -2,18 +2,17 @@ package services
 
 import (
 	"context"
-	"database/sql"
+	"go-api/paginates"
 	"go-api/src/models"
 	"go-api/src/repositories"
 	requests "go-api/src/requests"
-	response "go-api/src/responses"
 	"go-api/src/utils/mapper"
 )
 
 type RolesService interface {
 	// Insert your function interface
-	// GetAll Roles
-	GetRoles(ctx context.Context) ([]response.Role, error)
+	// GetAll Roles by Paginate
+	GetRoles(ctx context.Context, paginate paginates.PaginateRequest) (*paginates.PaginatedResponse, error)
 
 	// Create Roles
 	CreateRoles(ctx context.Context, roles requests.Role) error
@@ -33,30 +32,13 @@ func NewRolesService(
 	}
 }
 
-func (s *rolesService) GetRoles(ctx context.Context) ([]response.Role, error) {
+func (s *rolesService) GetRoles(ctx context.Context, paginate paginates.PaginateRequest) (*paginates.PaginatedResponse, error) {
 	// get roles from repository
-	roles, err := s.repositoryRoles.GetRoles(ctx)
+	roles, err := s.repositoryRoles.GetRoles(ctx, paginate)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return []response.Role{}, nil
-		}
 		return nil, err
 	}
-	// concat roles data to response.Role
-	newRoles := []response.Role{}
-
-	for _, role := range roles {
-		var newRole response.Role
-		mapper.StructMapper(role, &newRole)
-		newRole.ID = role.ID
-		newRole.CreatedAt = role.CreatedAt
-		newRole.UpdatedAt = role.UpdatedAt
-
-		newRoles = append(newRoles, newRole)
-
-	}
-
-	return newRoles, nil
+	return roles, nil
 }
 
 func (s *rolesService) CreateRoles(ctx context.Context, roles requests.Role) error {
