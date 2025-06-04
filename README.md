@@ -6,3 +6,6 @@
 ```
 go-gen <yourServiceName>
 ```
+```
+Test n8n
+```
